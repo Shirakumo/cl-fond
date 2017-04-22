@@ -26,15 +26,18 @@
 (defclass font (c-object)
   ())
 
+(defun string->char* (string)
+  (cffi:foreign-string-alloc string :encoding :utf-8))
+
 (defmethod initialize-instance :after ((font font) &key file (index 0) (size 20) oversample charset)
   (let ((handle (handle font)))
     (setf (cl-fond-cffi:font-file handle)
-          (etypecase file
-            (string file)
-            (pathname (uiop:native-namestring file))))
+          (string->char* (etypecase file
+                           (string file)
+                           (pathname (uiop:native-namestring file)))))
     (setf (cl-fond-cffi:font-index handle) index)
     (setf (cl-fond-cffi:font-size handle) (coerce size 'single-float))
-    (setf (cl-fond-cffi:font-characters handle) charset)
+    (setf (cl-fond-cffi:font-characters handle) (string->char* charset))
     (when oversample (setf (cl-fond-cffi:font-oversample handle) oversample))
     (unless (cl-fond-cffi:load-font-fit handle (cl-opengl:get* :max-texture-size))
       (show-error))))
@@ -47,7 +50,10 @@
   (cffi:foreign-alloc '(:struct cl-fond-cffi:font)))
 
 (defmethod free-handle ((font font) handle)
-  (lambda () (cl-fond-cffi:free-font handle)))
+  (lambda ()
+    (cffi:foreign-string-free (cl-fond-cffi:font-file handle))
+    (cffi:foreign-string-free (cl-fond-cffi:font-characters handle))
+    (cl-fond-cffi:free-font handle)))
 
 (defmethod compute-text ((font font) text)
   (with-foreign-objects ((n 'cl-fond-cffi:size_t)

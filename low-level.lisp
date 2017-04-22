@@ -43,10 +43,10 @@
   :no-characters-or-codepoints)
 
 (defcstruct (font :class font :conc-name font-)
-  (file :string)
+  (file :pointer)
   (index :int)
   (size :float)
-  (characters :string)
+  (characters :pointer)
   (codepoints :pointer)
   (width :uint)
   (height :uint)
