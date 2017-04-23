@@ -25,6 +25,7 @@
    #:font-height
    #:font-oversample
    #:font-atlas
+   #:font-fontdata
    #:font-chardata
    #:font-fontinfo
    #:font-converted-codepoints

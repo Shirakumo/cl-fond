@@ -43,15 +43,19 @@
   :no-characters-or-codepoints)
 
 (defcstruct (font :class font :conc-name font-)
+  ;; Font info
   (file :pointer)
   (index :int)
   (size :float)
   (characters :pointer)
   (codepoints :pointer)
+  ;; Buffer info
   (width :uint)
   (height :uint)
   (oversample :uint)
   (atlas :uint)
+  ;; Internal data
+  (fontdata :pointer)
   (chardata :pointer)
   (fontinfo :pointer)
   (converted-codepoints :int))
