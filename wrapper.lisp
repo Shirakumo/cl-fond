@@ -16,12 +16,19 @@
 
 (defmethod allocate-handle (class))
 (defmethod free-handle (class handle))
+(defmethod free (class))
 
 (defmethod initialize-instance :after ((c-object c-object) &key)
   (unless (handle c-object)
     (let ((handle (allocate-handle c-object)))
       (setf (handle c-object) handle)
       (tg:finalize c-object (free-handle c-object handle)))))
+
+(defmethod free ((object c-object))
+  (let ((handle (handle object)))
+    (tg:cancel-finalization object)
+    (setf (handle object) NIL)
+    (funcall (free-handle object handle))))
 
 (defclass font (c-object)
   ())

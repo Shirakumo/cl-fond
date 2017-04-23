@@ -63,6 +63,7 @@
   (:export
    #:c-object
    #:handle
+   #:free
    #:font
    #:make-font
    #:compute-text
