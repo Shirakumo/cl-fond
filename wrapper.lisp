@@ -11,6 +11,11 @@
     (unless (eql error :no-error)
       (error "Fond error: ~a" (cl-fond-cffi:fond-error-string error)))))
 
+(defun calloc (type)
+  (let ((ptr (cffi:foreign-alloc type)))
+    (dotimes (i (cffi:foreign-type-size type) ptr)
+      (setf (cffi:mem-aref ptr :uchar i) 0))))
+
 (defclass c-object ()
   ((handle :initform NIL :initarg :handle :accessor handle)))
 
@@ -55,13 +60,14 @@
   (apply #'make-instance 'font :file file :charset charset args))
 
 (defmethod allocate-handle ((font font))
-  (cffi:foreign-alloc '(:struct cl-fond-cffi:font)))
+  (calloc '(:struct cl-fond-cffi:font)))
 
 (defmethod free-handle ((font font) handle)
   (lambda ()
     (cffi:foreign-string-free (cl-fond-cffi:font-file handle))
     (cffi:foreign-string-free (cl-fond-cffi:font-characters handle))
-    (cl-fond-cffi:free-font handle)))
+    (cl-fond-cffi:free-font handle)
+    (cffi:foreign-free handle)))
 
 (defmethod compute-text ((font font) text)
   (with-foreign-objects ((n 'cl-fond-cffi:size_t)
@@ -118,10 +124,12 @@
   (make-instance 'buffer :font font :width width :height height))
 
 (defmethod allocate-handle ((buffer buffer))
-  (cffi:foreign-alloc '(:struct cl-fond-cffi:buffer)))
+  (calloc '(:struct cl-fond-cffi:buffer)))
 
 (defmethod free-handle ((buffer buffer) handle)
-  (lambda () (cl-fond-cffi:free-buffer handle)))
+  (lambda ()
+    (cl-fond-cffi:free-buffer handle)
+    (cffi:foreign-free handle)))
 
 (defmethod render ((buffer buffer) text &key (x 0) (y 0) color)
   (with-foreign-object (_color :float 4)
