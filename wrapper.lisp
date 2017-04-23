@@ -92,7 +92,7 @@
 
 (defmethod height ((font font))
   (with-foreign-object (extent '(:struct cl-fond-cffi:extent))
-    (unless (cl-fond-cffi:compute-extent-u (handle font) 0 0 extent)
+    (unless (cl-fond-cffi:compute-extent-u (handle font) (cffi:null-pointer) 0 extent)
       (show-error))
     (cl-fond-cffi:extent-t extent)))
 
