@@ -26,9 +26,10 @@
 
 (defmethod free ((object c-object))
   (let ((handle (handle object)))
-    (tg:cancel-finalization object)
-    (setf (handle object) NIL)
-    (funcall (free-handle object handle))))
+    (when handle
+      (tg:cancel-finalization object)
+      (setf (handle object) NIL)
+      (funcall (free-handle object handle)))))
 
 (defclass font (c-object)
   ())
