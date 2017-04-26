@@ -33,13 +33,13 @@ We set the `y` coordinate to the height of the font here, as libfond sets `0,0` 
 
 If you want to manually render the characters instead, you'll want to use `compute-text` as follows:
 
-   (cl-fond:compute-text *font* "Heyo.")
+    (cl-fond:compute-text *font* "Heyo.")
 
 Returned by it will be an OpenGL vertex array to draw with and the number of elements it contains. After binding your shader program and setting things up properly, you can then draw the characters as follows:
 
-   (gl:bind-texture :texture-2d (cl-fond:atlas *font*))
-   (gl:bind-vertex-array vao)
-   (%gl:draw-elements :triangles count :unsigned-int 0)
+    (gl:bind-texture :texture-2d (cl-fond:atlas *font*))
+    (gl:bind-vertex-array vao)
+    (%gl:draw-elements :triangles count :unsigned-int 0)
 
 The VAO contains two `vec2` inputs: the position and the texture coordinate. Note that the position is scaled to pixel size. You will likely want to adapt this in your vertex shader to fit appropriately. In your fragment shader you will only want to read out the `r` component of the texture. Every other component is 0.
 
