@@ -6,22 +6,28 @@
 
 (in-package #:org.shirakumo.fraf.fond)
 
+(define-condition fond-error (error)
+  ((error-code :initarg :error-code :accessor error-code))
+  (:report (lambda (c s) (write-string (cl-fond-cffi:fond-error-string (error-code c)) s))))
+
 (defun show-error ()
-  (let ((error (cl-fond-cffi:fond-error)))
-    (unless (eql error :no-error)
-      (error "Fond error: ~a" (cl-fond-cffi:fond-error-string error)))))
+  (let ((code (cl-fond-cffi:fond-error)))
+    (unless (eql code :no-error)
+      (error 'fond-error :code code))))
 
 (defun calloc (type)
   (let ((ptr (cffi:foreign-alloc type)))
     (dotimes (i (cffi:foreign-type-size type) ptr)
       (setf (cffi:mem-aref ptr :uchar i) 0))))
 
+(defun string->char* (string)
+  (cffi:foreign-string-alloc string :encoding :utf-8))
+
 (defclass c-object ()
   ((handle :initform NIL :initarg :handle :accessor handle)))
 
-(defmethod allocate-handle (class))
-(defmethod free-handle (class handle))
-(defmethod free (class))
+(defgeneric allocate-handle (class))
+(defgeneric free-handle (class handle))
 
 (defmethod initialize-instance :after ((c-object c-object) &key)
   (unless (handle c-object)
@@ -39,10 +45,7 @@
 (defclass font (c-object)
   ())
 
-(defun string->char* (string)
-  (cffi:foreign-string-alloc string :encoding :utf-8))
-
-(defmethod initialize-instance :after ((font font) &key file (index 0) (size 20) oversample charset)
+(defmethod initialize-instance :after ((font font) &key file (index 0) (size 20) oversample charset width height)
   (let ((handle (handle font)))
     (setf (cl-fond-cffi:font-file handle)
           (string->char* (etypecase file
@@ -51,12 +54,14 @@
     (setf (cl-fond-cffi:font-index handle) index)
     (setf (cl-fond-cffi:font-size handle) (coerce size 'single-float))
     (setf (cl-fond-cffi:font-characters handle) (string->char* charset))
+    (when width (setf (cl-fond-cffi:font-width handle) width))
+    (when height (setf (cl-fond-cffi:font-height handle) height))
     (when oversample (setf (cl-fond-cffi:font-oversample handle) oversample))
     (unless (cl-fond-cffi:load-font-fit handle (cl-opengl:get* :max-texture-size))
       (show-error))))
 
-(defun make-font (file charset &rest args &key index size oversample)
-  (declare (ignore index size oversample))
+(defun make-font (file charset &rest args &key index size oversample width height)
+  (declare (ignore index size oversample width heigt))
   (apply #'make-instance 'font :file file :charset charset args))
 
 (defmethod allocate-handle ((font font))
@@ -90,19 +95,19 @@
 (defmethod size ((font font))
   (cl-fond-cffi:font-size (handle font)))
 
-(defmethod height ((font font))
+(defmethod text-height ((font font))
   (with-foreign-object (extent '(:struct cl-fond-cffi:extent))
     (unless (cl-fond-cffi:compute-extent-u (handle font) (cffi:null-pointer) 0 extent)
       (show-error))
     (cl-fond-cffi:extent-t extent)))
 
-(defmethod atlas-width ((font font))
+(defmethod width ((font font))
   (cl-fond-cffi:font-width (handle font)))
 
-(defmethod atlas-height ((font font))
+(defmethod height ((font font))
   (cl-fond-cffi:font-height (handle font)))
 
-(defmethod atlas ((font font))
+(defmethod texture ((font font))
   (cl-fond-cffi:font-atlas (handle font)))
 
 (defmethod charset ((font font))
@@ -150,3 +155,7 @@
 
 (defmethod texture ((buffer buffer))
   (cl-fond-cffi:buffer-texture (handle buffer)))
+
+(defmethod (setf font) :before (font (buffer buffer))
+  (check-type font font)
+  (setf (cl-fond-cffi:buffer-font (handle buffer)) (handle font)))

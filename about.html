@@ -1,0 +1,401 @@
+<!DOCTYPE html> <html xmlns="http://www.w3.org/1999/xhtml"> <head> <meta charset="utf-8"/> <title>Cl-Fond</title> <meta name="viewport" content="width=device-width"/> <meta name="description" content="Bindings to libfond, a simple text rendering engine for OpenGL"/> <meta name="author" content="Nicolas Hafner &lt;shinmera@tymoon.eu&gt;"/> <style type="text/css"> body{
+          max-width: 1024px;
+          margin: 0 auto 0 auto;
+          font-family: sans-serif;
+          color: #333333;
+          font-size: 14pt;
+          padding: 5px;
+      }
+      body>header{
+          display:flex;
+          align-items: center;
+          justify-content: center;
+          flex-direction: column;
+          max-width: 100%;
+          text-align: center;
+      }
+      body>header img{
+          max-width: 50%;
+      }
+      img{
+          max-width: 100%;
+          max-height: 100%;
+      }
+      code{
+          font-family: Consolas, Inconsolata, monospace;
+      }
+      a{
+          text-decoration: none;
+          color: #0055AA;
+      }
+      a img{
+          border: none;
+      }
+      #documentation{
+          text-align: justify;
+      }
+      #documentation pre{
+          margin-left: 20px;
+          overflow: auto;
+      }
+      #documentation img{
+          margin: 5px;
+      }
+      #symbol-index>ul{
+          list-style: none;
+          padding: 0;
+      }
+      #symbol-index .package>ul{
+          list-style: none;
+          padding: 0 0 0 10px;
+      }
+      #symbol-index .package .nicknames{
+          font-weight: normal;
+      }
+      #symbol-index .package h4{
+          display: inline-block;
+          margin: 0;
+      }
+      #symbol-index .package article{
+          margin: 0 0 15px 0;
+      }
+      #symbol-index .package article header{
+          font-size: 1.2em;
+          font-weight: normal;
+      }
+      #symbol-index .package .name{
+          margin-right: 5px;
+      }
+      #symbol-index .package .docstring{
+          margin: 0 0 0 15px;
+          white-space: pre-wrap;
+          font-size: 12pt;
+      }
+      @media (max-width: 800px){
+          body{font-size: 12pt;}
+      } </style> </head> <body> <header> <h1>cl-fond</h1> <span class="version">1.0.0</span> <p class="description">Bindings to libfond, a simple text rendering engine for OpenGL</p> </header> <main> <article id="documentation">  <div><h2>About cl-fond</h2> <p>This is a bindings library to <a href="https://github.com/Shirakumo/libfond">libfond</a>, a simple OpenGL text rendering engine.</p> <h2>How To</h2> <p>Precompiled versions of the underlying library are included in this. If you want to build it manually however, refer to the <a href="https://github.com/Shirakumo/libfond">libfond</a> repository.</p> <p>Load the system through ASDF or Quicklisp:</p> <pre><code>(ql:quickload :cl-fond)
+</code></pre> <p>Before you can create any of the objects, you need to have an OpenGL 3.3+ context current. Creating a context is outside of the scope of this library. Please refer to your framework. Once you do have a context handy, you can create a font object:</p> <pre><code>(<a href="http://l1sp.org/cl/defvar">defvar</a> *font* (<a href="#CL-FOND:MAKE-FONT">cl-fond:make-font</a> #p&quot;~/test.ttf&quot; &quot;abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ .!?&quot;))
+</code></pre> <p>The string there specifies the character set for which the font should be loaded. You will only be able to render characters from that set. Note that the more characters you have and the bigger you make the font size, the larger the texture it will have to allocate to map out the characters. If there is an error of some kind, like being unable to read the file or fit it into a texture atlas, a condition is signalled. Otherwise the font should be readily loaded and you can start working with it.</p> <pre><code>(<a href="#CL-FOND-CFFI:COMPUTE-EXTENT">compute-extent</a> *font* &quot;Hello there!&quot;)
+</code></pre> <p>If you actually want to render text, you are given two options:</p> <ol> <li>Using the readily provided buffer class</li> <li>Rendering the text manually</li> </ol> <p>The former has the advantage of being much simpler, at the cost of rendering to an offscreen texture instead of directly to the screen. The latter gives you more control over how you place and render the text at the cost of having to write your own shaders to do it. Let's look at the easy way first:</p> <pre><code>(<a href="http://l1sp.org/cl/defvar">defvar</a> *buffer* (<a href="#CL-FOND:MAKE-BUFFER">cl-fond:make-buffer</a> *font* 512 30))
+</code></pre> <p>With a default font size of 20px, 30px for the height should be enough room. This function may again error if it fails to properly allocate the resources it needs in the back. Once it is ready you can start rendering text to it.</p> <pre><code>(<a href="#CL-FOND:RENDER">cl-fond:render</a> *buffer* &quot;Sup man.&quot; :y (<a href="#CL-FOND:HEIGHT">height</a> *font*))
+</code></pre> <p>We set the <code>y</code> coordinate to the height of the font here, as libfond sets <code>0,0</code> in the top left corner and <code>x,y</code> of the text on the left of its baseline. Thus in order to make the text visible on the buffer, we need to offset the y coordinate by at least the font's height. Once rendered, it returns the OpenGL texture that it rendered to. You can then render this texture onto a quad in your primary render code. Keep in mind that you need to respect the aspect ratio of the buffer, and that scaling its texture beyond the specified size will make things look blurry.</p> <p>If you want to manually render the characters instead, you'll want to use <code><a href="#CL-FOND-CFFI:COMPUTE-TEXT">compute-text</a></code> as follows:</p> <pre><code>(<a href="#CL-FOND:COMPUTE-TEXT">cl-fond:compute-text</a> *font* &quot;Heyo.&quot;)
+</code></pre> <p>Returned by it will be an OpenGL vertex array to draw with and the number of elements it contains. After binding your shader program and setting things up properly, you can then draw the characters as follows:</p> <pre><code>(gl:bind-texture :texture-2d (<a href="#CL-FOND:ATLAS">cl-fond:atlas</a> *font*))
+(gl:bind-vertex-array vao)
+(%gl:draw-elements :triangles count :unsigned-int 0)
+</code></pre> <p>The VAO contains two <code>vec2</code> inputs: the position and the texture coordinate. Note that the position is scaled to pixel size. You will likely want to adapt this in your vertex shader to fit appropriately. In your fragment shader you will only want to read out the <code>r</code> component of the texture. Every other component is 0.</p> <p>See the default <a href="src/shader/to_texture.vert">vertex</a> and <a href="src/shader/to_texture.frag">fragment</a> shaders used by the buffer for an example.</p> </div>  </article> <article id="copyright">  <h2>Copyright</h2> <span>cl-fond</span> is licensed under the <span><a href="https://tldrlegal.com/search?q=Artistic">Artistic</a></span> license.  © <span>Nicolas Hafner &lt;shinmera@tymoon.eu&gt;</span> .  This library can be obtained on <a href="https://github.com/Shirakumo/cl-fond">https://github.com/Shirakumo/cl-fond</a>.  </article>  <article id="symbol-index"> <h2>Package Index</h2> <ul><li class="package"> <h3> <a name="CL-FOND-CFFI" href="#CL-FOND-CFFI">CL-FOND-CFFI</a> <span class="nicknames">(ORG.SHIRAKUMO.FRAF.FOND.CFFI)</span> </h3> <ul><li> <a name="CL-FOND-CFFI:*STATIC*"> </a> <article> <header class="special"> <span class="type">special</span>  <h4 class="name"><code><a href="#CL-FOND-CFFI:*STATIC*">*STATIC*</a></code></h4>  </header> <div class="docstring"><pre>Variable containing the path to the static directory.
+That directory contains the precompiled library binaries.</pre></div> </article> </li><li> <a name="CL-FOND-CFFI:BUFFER"> </a> <article> <header class="class"> <span class="type">class</span>  <h4 class="name"><code><a href="#CL-FOND-CFFI:BUFFER">BUFFER</a></code></h4>  </header> <div class="docstring"><pre>This struct allows for convenience in rendering, as it will render text for you into a texture.
+
+You must allocate this struct yourself and make sure that
+it is zeroed out before you do anything with it. Not
+zeroing out will land you in a world of pain.
+
+See <a href="#CL-FOND-CFFI:BUFFER-FONT">BUFFER-FONT</a>
+See <a href="#CL-FOND-CFFI:BUFFER-TEXTURE">BUFFER-TEXTURE</a>
+See <a href="#CL-FOND-CFFI:BUFFER-WIDTH">BUFFER-WIDTH</a>
+See <a href="#CL-FOND-CFFI:BUFFER-HEIGHT">BUFFER-HEIGHT</a>
+See <a href="#CL-FOND-CFFI:BUFFER-PROGRAM">BUFFER-PROGRAM</a>
+See <a href="#CL-FOND-CFFI:BUFFER-FRAMEBUFFER">BUFFER-FRAMEBUFFER</a>
+See <a href="#CL-FOND-CFFI:FREE-BUFFER">FREE-BUFFER</a>
+See <a href="#CL-FOND-CFFI:LOAD-BUFFER">LOAD-BUFFER</a>
+See <a href="#CL-FOND-CFFI:RENDER-BUFFER">RENDER-BUFFER</a>
+See <a href="#CL-FOND-CFFI:RENDER-BUFFER-U">RENDER-BUFFER-U</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:EXTENT"> </a> <article> <header class="class"> <span class="type">class</span>  <h4 class="name"><code><a href="#CL-FOND-CFFI:EXTENT">EXTENT</a></code></h4>  </header> <div class="docstring"><pre>This struct contains information about the extents of a text.
+
+You must allocate this struct yourself and make sure that
+it is zeroed out before you do anything with it. Not
+zeroing out will land you in a world of pain.
+
+See <a href="#CL-FOND-CFFI:EXTENT-L">EXTENT-L</a>
+See <a href="#CL-FOND-CFFI:EXTENT-R">EXTENT-R</a>
+See <a href="#CL-FOND-CFFI:EXTENT-T">EXTENT-T</a>
+See <a href="#CL-FOND-CFFI:EXTENT-B">EXTENT-B</a>
+See <a href="#CL-FOND-CFFI:EXTENT-GAP">EXTENT-GAP</a>
+See <a href="#CL-FOND-CFFI:COMPUTE-EXTENT">COMPUTE-EXTENT</a>
+See <a href="#CL-FOND-CFFI:COMPUTE-EXTENT-U">COMPUTE-EXTENT-U</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:FONT"> </a> <article> <header class="class"> <span class="type">class</span>  <h4 class="name"><code><a href="#CL-FOND-CFFI:FONT">FONT</a></code></h4>  </header> <div class="docstring"><pre>This is the primary struct that contains all relevant information about a font.
+
+You must allocate this struct yourself and make sure that
+it is zeroed out before you do anything with it. Not
+zeroing out will land you in a world of pain.
+
+See <a href="#CL-FOND-CFFI:FONT-FILE">FONT-FILE</a>
+See <a href="#CL-FOND-CFFI:FONT-INDEX">FONT-INDEX</a>
+See <a href="#CL-FOND-CFFI:FONT-SIZE">FONT-SIZE</a>
+See <a href="#CL-FOND-CFFI:FONT-CHARACTERS">FONT-CHARACTERS</a>
+See <a href="#CL-FOND-CFFI:FONT-CODEPOINTS">FONT-CODEPOINTS</a>
+See <a href="#CL-FOND-CFFI:FONT-WIDTH">FONT-WIDTH</a>
+See <a href="#CL-FOND-CFFI:FONT-HEIGHT">FONT-HEIGHT</a>
+See <a href="#CL-FOND-CFFI:FONT-OVERSAMPLE">FONT-OVERSAMPLE</a>
+See <a href="#CL-FOND-CFFI:FONT-ATLAS">FONT-ATLAS</a>
+See <a href="#CL-FOND-CFFI:FONT-FONTDATA">FONT-FONTDATA</a>
+See <a href="#CL-FOND-CFFI:FONT-CHARDATA">FONT-CHARDATA</a>
+See <a href="#CL-FOND-CFFI:FONT-FONTINFO">FONT-FONTINFO</a>
+See <a href="#CL-FOND-CFFI:FONT-CONVERTED-CODEPOINTS">FONT-CONVERTED-CODEPOINTS</a>
+See <a href="#CL-FOND-CFFI:LOAD-FONT">LOAD-FONT</a>
+See <a href="#CL-FOND-CFFI:LOAD-FONT-FIT">LOAD-FONT-FIT</a>
+See <a href="#CL-FOND-CFFI:FREE-FONT">FREE-FONT</a>
+See <a href="#CL-FOND-CFFI:COMPUTE-TEXT">COMPUTE-TEXT</a>
+See <a href="#CL-FOND-CFFI:COMPUTE-TEXT-U">COMPUTE-TEXT-U</a>
+See <a href="#CL-FOND-CFFI:COMPUTE-EXTENT">COMPUTE-EXTENT</a>
+See <a href="#CL-FOND-CFFI:COMPUTE-EXTENT-U">COMPUTE-EXTENT-U</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:ERROR"> </a> <article> <header class="condition"> <span class="type">condition</span>  <h4 class="name"><code><a href="#CL-FOND-CFFI:ERROR">ERROR</a></code></h4>  </header> <div class="docstring"><i>No docstring provided.</i></div> </article> </li><li> <a name="CL-FOND-CFFI:BUFFER-FONT"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:BUFFER-FONT">BUFFER-FONT</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-BUFFER</code><code>)</code>  </header> <div class="docstring"><pre>Pointer to the font that it renders.
+
+This can be exchanged for another font, if you should
+decide to want to render with a different font.
+
+See <a href="#CL-FOND-CFFI:BUFFER">BUFFER</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:BUFFER-FRAMEBUFFER"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:BUFFER-FRAMEBUFFER">BUFFER-FRAMEBUFFER</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-BUFFER</code><code>)</code>  </header> <div class="docstring"><pre>This is an internal field.
+
+See <a href="#CL-FOND-CFFI:BUFFER">BUFFER</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:BUFFER-HEIGHT"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:BUFFER-HEIGHT">BUFFER-HEIGHT</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-BUFFER</code><code>)</code>  </header> <div class="docstring"><pre>The height of the texture.
+
+See <a href="#CL-FOND-CFFI:BUFFER">BUFFER</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:BUFFER-PROGRAM"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:BUFFER-PROGRAM">BUFFER-PROGRAM</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-BUFFER</code><code>)</code>  </header> <div class="docstring"><pre>This is an internal field.
+
+See <a href="#CL-FOND-CFFI:BUFFER">BUFFER</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:BUFFER-TEXTURE"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:BUFFER-TEXTURE">BUFFER-TEXTURE</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-BUFFER</code><code>)</code>  </header> <div class="docstring"><pre>The OpenGL texture ID to which this buffer renders to.
+
+See <a href="#CL-FOND-CFFI:BUFFER">BUFFER</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:BUFFER-WIDTH"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:BUFFER-WIDTH">BUFFER-WIDTH</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-BUFFER</code><code>)</code>  </header> <div class="docstring"><pre>The width of the texture.
+
+See <a href="#CL-FOND-CFFI:BUFFER">BUFFER</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:EXTENT-B"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:EXTENT-B">EXTENT-B</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-EXTENT</code><code>)</code>  </header> <div class="docstring"><pre>How far down the text extends from its baseline.
+
+See <a href="#CL-FOND-CFFI:EXTENT">EXTENT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:EXTENT-GAP"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:EXTENT-GAP">EXTENT-GAP</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-EXTENT</code><code>)</code>  </header> <div class="docstring"><pre>The gap between lines of the text.
+
+See <a href="#CL-FOND-CFFI:EXTENT">EXTENT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:EXTENT-L"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:EXTENT-L">EXTENT-L</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-EXTENT</code><code>)</code>  </header> <div class="docstring"><pre>How far to the left the text extends from zero.
+
+See <a href="#CL-FOND-CFFI:EXTENT">EXTENT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:EXTENT-R"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:EXTENT-R">EXTENT-R</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-EXTENT</code><code>)</code>  </header> <div class="docstring"><pre>How far to the right the text extends from zero.
+
+See <a href="#CL-FOND-CFFI:EXTENT">EXTENT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:EXTENT-T"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:EXTENT-T">EXTENT-T</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-EXTENT</code><code>)</code>  </header> <div class="docstring"><pre>How far up the text extends from its baseline.
+
+See <a href="#CL-FOND-CFFI:EXTENT">EXTENT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:FONT-ATLAS"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:FONT-ATLAS">FONT-ATLAS</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-FONT</code><code>)</code>  </header> <div class="docstring"><pre>The OpenGL texture ID for the atlas.
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:FONT-CHARACTERS"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:FONT-CHARACTERS">FONT-CHARACTERS</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-FONT</code><code>)</code>  </header> <div class="docstring"><pre>A UTF8 encoded string of characters that this font instance will be able to render.
+
+Must be null-terminated.
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:FONT-CHARDATA"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:FONT-CHARDATA">FONT-CHARDATA</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-FONT</code><code>)</code>  </header> <div class="docstring"><pre>This is an internal field.
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:FONT-CODEPOINTS"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:FONT-CODEPOINTS">FONT-CODEPOINTS</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-FONT</code><code>)</code>  </header> <div class="docstring"><pre>An array of Unicode codepoints that this font instance will be able to render.
+
+Must be null-terminated. This is automatically filled in for
+you if it is NULL and the characters field is provided instead.
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:FONT-CONVERTED-CODEPOINTS"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:FONT-CONVERTED-CODEPOINTS">FONT-CONVERTED-CODEPOINTS</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-FONT</code><code>)</code>  </header> <div class="docstring"><pre>This is an internal field.
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:FONT-FILE"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:FONT-FILE">FONT-FILE</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-FONT</code><code>)</code>  </header> <div class="docstring"><pre>Accessor for the path to the TTF file.
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:FONT-FONTDATA"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:FONT-FONTDATA">FONT-FONTDATA</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-FONT</code><code>)</code>  </header> <div class="docstring"><pre>This is an internal field.
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:FONT-FONTINFO"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:FONT-FONTINFO">FONT-FONTINFO</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-FONT</code><code>)</code>  </header> <div class="docstring"><pre>This is an internal field.
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:FONT-HEIGHT"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:FONT-HEIGHT">FONT-HEIGHT</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-FONT</code><code>)</code>  </header> <div class="docstring"><pre>The height of the glyph texture atlas.
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:FONT-INDEX"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:FONT-INDEX">FONT-INDEX</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-FONT</code><code>)</code>  </header> <div class="docstring"><pre>Accessor for the index of the font within the TTF file.
+
+You probably don't need to set this.
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:FONT-OVERSAMPLE"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:FONT-OVERSAMPLE">FONT-OVERSAMPLE</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-FONT</code><code>)</code>  </header> <div class="docstring"><pre>How much oversampling should be done.
+
+Higher oversampling might improve the quality of the rendering,
+but will need a much bigger atlas size:
+  width*oversampling,height*oversampling
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:FONT-SIZE"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:FONT-SIZE">FONT-SIZE</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-FONT</code><code>)</code>  </header> <div class="docstring"><pre>The vertical font size in pixels.
+
+If you render it above this resolution, you'll get blurring.
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:FONT-WIDTH"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:FONT-WIDTH">FONT-WIDTH</a></code></h4> <code class="qualifiers"></code> <code class="arguments">POINTER-TO-FONT</code><code>)</code>  </header> <div class="docstring"><pre>The width of the glyph texture atlas.
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:COMPUTE-EXTENT"> </a> <article> <header class="function"> <span class="type">function</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:COMPUTE-EXTENT">COMPUTE-EXTENT</a></code></h4> <code class="qualifiers"></code> <code class="arguments">FONT TEXT EXTENT</code><code>)</code>  </header> <div class="docstring"><pre>Compute the extent of the given text.
+
+You must allocate the extent struct yourself and make
+sure it is zeroed out.
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a>
+See <a href="#CL-FOND-CFFI:EXTENT">EXTENT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:COMPUTE-EXTENT-U"> </a> <article> <header class="function"> <span class="type">function</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:COMPUTE-EXTENT-U">COMPUTE-EXTENT-U</a></code></h4> <code class="qualifiers"></code> <code class="arguments">FONT TEXT SIZE EXTENT</code><code>)</code>  </header> <div class="docstring"><pre>Same as COMPUTE-EXTENT but taking an UTF32 encoded string and its size.
+
+See <a href="#CL-FOND-CFFI:COMPUTE-EXTENT">COMPUTE-EXTENT</a>
+See <a href="#CL-FOND-CFFI:FONT">FONT</a>
+See <a href="#CL-FOND-CFFI:EXTENT">EXTENT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:COMPUTE-TEXT"> </a> <article> <header class="function"> <span class="type">function</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:COMPUTE-TEXT">COMPUTE-TEXT</a></code></h4> <code class="qualifiers"></code> <code class="arguments">FONT TEXT N VAO</code><code>)</code>  </header> <div class="docstring"><pre>Compute the Vertex Array Object to render the given text.
+
+Here, n and vao are output arguments, containing the
+number of elements and the OpenGL VAO ID respectively.
+The text must be UTF8 encoded and null-terminated. The
+returned VAO contains two arrays, at location 0 and 1,
+with both being vec2s. The first being the vertex
+coordinates and the second being the texture
+coordinates. The vertex coordinates start at 0 and
+increase in x and y as per the font's size. You are
+responsible for scaling it as appropriate for your
+display. The texture coordinates are for the font's
+atlas texture. If the text contains a Linefeed
+character (U+000A) a new line is started automatically
+by resetting X to 0 and decreasing Y by the necessary
+height for a new line.
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:COMPUTE-TEXT-U"> </a> <article> <header class="function"> <span class="type">function</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:COMPUTE-TEXT-U">COMPUTE-TEXT-U</a></code></h4> <code class="qualifiers"></code> <code class="arguments">FONT TEXT SIZE N VAO</code><code>)</code>  </header> <div class="docstring"><pre>Same as COMPUTE-EXTENT but taking an UTF32 encoded string and its size.
+
+See <a href="#CL-FOND-CFFI:COMPUTE-TEXT">COMPUTE-TEXT</a>
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:DECODE-UTF8"> </a> <article> <header class="function"> <span class="type">function</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:DECODE-UTF8">DECODE-UTF8</a></code></h4> <code class="qualifiers"></code> <code class="arguments">STRING DECODED SIZE</code><code>)</code>  </header> <div class="docstring"><pre>Decode the given UTF8 string into an UTF32 string.
+
+The resulting string is put into decoded, and its size is
+put into size. This is used by the non _u functions to
+decode the string. You may want to use this internally,
+if you need to re-use the same string often and don't wnat
+to pay the conversion cost.</pre></div> </article> </li><li> <a name="CL-FOND-CFFI:ERROR"> </a> <article> <header class="function"> <span class="type">function</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:ERROR">ERROR</a></code></h4> <code class="qualifiers"></code> <code class="arguments">DATUM &amp;REST ARGUMENTS</code><code>)</code>  </header> <div class="docstring"><pre>Invoke the signal facility on a condition formed from DATUM and ARGUMENTS.
+  If the condition is not handled, the debugger is invoked.</pre></div> </article> </li><li> <a name="CL-FOND-CFFI:FOND-ERROR"> </a> <article> <header class="function"> <span class="type">function</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:FOND-ERROR">FOND-ERROR</a></code></h4> <code class="qualifiers"></code> <code class="arguments"></code><code>)</code>  </header> <div class="docstring"><pre>Return the current error code.</pre></div> </article> </li><li> <a name="CL-FOND-CFFI:FOND-ERROR-STRING"> </a> <article> <header class="function"> <span class="type">function</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:FOND-ERROR-STRING">FOND-ERROR-STRING</a></code></h4> <code class="qualifiers"></code> <code class="arguments">ERROR</code><code>)</code>  </header> <div class="docstring"><pre>Return a string for a human-readable error message of the given error code.</pre></div> </article> </li><li> <a name="CL-FOND-CFFI:FREE-BUFFER"> </a> <article> <header class="function"> <span class="type">function</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:FREE-BUFFER">FREE-BUFFER</a></code></h4> <code class="qualifiers"></code> <code class="arguments">BUFFER</code><code>)</code>  </header> <div class="docstring"><pre>Free all the data that was allocated into the struct by fond_load_buffer.
+
+This will /not/ free the font struct.
+
+See <a href="#CL-FOND-CFFI:BUFFER">BUFFER</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:FREE-FONT"> </a> <article> <header class="function"> <span class="type">function</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:FREE-FONT">FREE-FONT</a></code></h4> <code class="qualifiers"></code> <code class="arguments">FONT</code><code>)</code>  </header> <div class="docstring"><pre>Free all the data that was allocated into the struct by LOAD-FONT*
+
+This will /not/ free the characters array, the file
+array, or the codepoints array if the codepoints
+array was not computed by LOAD-FONT*
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:LOAD-BUFFER"> </a> <article> <header class="function"> <span class="type">function</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:LOAD-BUFFER">LOAD-BUFFER</a></code></h4> <code class="qualifiers"></code> <code class="arguments">BUFFER</code><code>)</code>  </header> <div class="docstring"><pre>Load the buffer struct and allocate the necessary OpenGL data.
+
+The following fields must be set in the struct:
+  font
+  width
+  height
+
+See <a href="#CL-FOND-CFFI:BUFFER">BUFFER</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:LOAD-FONT"> </a> <article> <header class="function"> <span class="type">function</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:LOAD-FONT">LOAD-FONT</a></code></h4> <code class="qualifiers"></code> <code class="arguments">FONT</code><code>)</code>  </header> <div class="docstring"><pre>Load the font struct and allocate the necessary OpenGL data.
+
+The following fields must be set in the struct:
+  file
+  size
+  width
+  height
+  characters or codepoints
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:LOAD-FONT-FIT"> </a> <article> <header class="function"> <span class="type">function</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:LOAD-FONT-FIT">LOAD-FONT-FIT</a></code></h4> <code class="qualifiers"></code> <code class="arguments">FONT MAX-SIZE</code><code>)</code>  </header> <div class="docstring"><pre>Load the font struct, attempting to fit an atlas automatically.
+
+This may not result in the most compact atlas possible.
+max_size is the maximum size of the width or height
+that can be reached before it gives up.
+
+The following fields must be set in the struct:
+  file
+  size
+  characters or codepoints
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:RENDER-BUFFER"> </a> <article> <header class="function"> <span class="type">function</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:RENDER-BUFFER">RENDER-BUFFER</a></code></h4> <code class="qualifiers"></code> <code class="arguments">BUFFER TEXT X Y COLOR</code><code>)</code>  </header> <div class="docstring"><pre>Render the given text to the buffer's texture.
+
+The text will be rendered at the given offset, with x
+and y being in pixels. color can be either 0 for white
+text, or an array of four floats, representing RGBA
+of the text's colour in that order.
+
+See <a href="#CL-FOND-CFFI:BUFFER">BUFFER</a></pre></div> </article> </li><li> <a name="CL-FOND-CFFI:RENDER-BUFFER-U"> </a> <article> <header class="function"> <span class="type">function</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND-CFFI:RENDER-BUFFER-U">RENDER-BUFFER-U</a></code></h4> <code class="qualifiers"></code> <code class="arguments">BUFFER TEXT SIZE X Y COLOR</code><code>)</code>  </header> <div class="docstring"><pre>Same as RENDER-BUFFER but taking an UTF32 encoded string and its size.
+
+See <a href="#CL-FOND-CFFI:RENDER-BUFFER">RENDER-BUFFER</a>
+See <a href="#CL-FOND-CFFI:BUFFER">BUFFER</a></pre></div> </article> </li></ul> </li><li class="package"> <h3> <a name="CL-FOND" href="#CL-FOND">CL-FOND</a> <span class="nicknames">(ORG.SHIRAKUMO.FRAF.FOND)</span> </h3> <ul><li> <a name="CL-FOND:BUFFER"> </a> <article> <header class="class"> <span class="type">class</span>  <h4 class="name"><code><a href="#CL-FOND:BUFFER">BUFFER</a></code></h4>  </header> <div class="docstring"><pre>This is a representation of a text buffer.
+
+The buffer allows you to conveniently draw text to a texture.
+You will then merely need to draw the texture to the screen,
+rather than needing to manually create a shader and handle the
+drawing yourself.
+
+See <a href="#CL-FOND:C-OBJECT">C-OBJECT</a>
+See <a href="#CL-FOND-CFFI:FONT">FONT</a>
+See <a href="#CL-FOND:MAKE-BUFFER">MAKE-BUFFER</a>
+See <a href="#CL-FOND:RENDER">RENDER</a>
+See <a href="#CL-FOND:WIDTH">WIDTH</a>
+See <a href="#CL-FOND:HEIGHT">HEIGHT</a>
+See <a href="#CL-FOND:TEXTURE">TEXTURE</a></pre></div> </article> </li><li> <a name="CL-FOND:C-OBJECT"> </a> <article> <header class="class"> <span class="type">class</span>  <h4 class="name"><code><a href="#CL-FOND:C-OBJECT">C-OBJECT</a></code></h4>  </header> <div class="docstring"><pre>Base class for all objects that are tied to a foreign object somehow.
+
+See <a href="#CL-FOND:HANDLE">HANDLE</a>
+See <a href="NIL">ALLOCATE-HANDLE</a>
+See <a href="NIL">FREE-HANDLE</a>
+See <a href="#CL-FOND:FREE">FREE</a></pre></div> </article> </li><li> <a name="CL-FOND:FONT"> </a> <article> <header class="class"> <span class="type">class</span>  <h4 class="name"><code><a href="#CL-FOND:FONT">FONT</a></code></h4>  </header> <div class="docstring"><pre>This is a representation of a font file.
+
+Using this class you can draw and compute text for a specific
+font at a specific size. The library will take care of rendering
+the font glyphs to an atlas to allow fast rendering of text.
+
+See <a href="#CL-FOND:C-OBJECT">C-OBJECT</a>
+See <a href="#CL-FOND:MAKE-FONT">MAKE-FONT</a>
+See <a href="#CL-FOND-CFFI:COMPUTE-TEXT">COMPUTE-TEXT</a>
+See <a href="#CL-FOND-CFFI:COMPUTE-EXTENT">COMPUTE-EXTENT</a>
+See <a href="#CL-FOND:FILE">FILE</a>
+See <a href="#CL-FOND:SIZE">SIZE</a>
+See <a href="NIL">TEXT-HEIGHT</a>
+See <a href="#CL-FOND:WIDTH">WIDTH</a>
+See <a href="#CL-FOND:HEIGHT">HEIGHT</a>
+See <a href="#CL-FOND:TEXTURE">TEXTURE</a>
+See <a href="#CL-FOND:CHARSET">CHARSET</a></pre></div> </article> </li><li> <a name="CL-FOND:FOND-ERROR"> </a> <article> <header class="condition"> <span class="type">condition</span>  <h4 class="name"><code><a href="#CL-FOND:FOND-ERROR">FOND-ERROR</a></code></h4>  </header> <div class="docstring"><pre>Condition signalled when an error occurs in the underlying libfond.
+
+See <a href="#CL-FOND:ERROR-CODE">ERROR-CODE</a></pre></div> </article> </li><li> <a name="CL-FOND:ERROR-CODE"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND:ERROR-CODE">ERROR-CODE</a></code></h4> <code class="qualifiers"></code> <code class="arguments">CONDITION</code><code>)</code>  </header> <div class="docstring"><pre>The error code that the condition carries.
+
+See <a href="#CL-FOND-CFFI:FOND-ERROR">FOND-ERROR</a>
+See <a href="#CL-FOND-CFFI:FOND-ERROR-STRING">CL-FOND-CFFI:FOND-ERROR-STRING</a></pre></div> </article> </li><li> <a name="CL-FOND:FONT"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND:FONT">FONT</a></code></h4> <code class="qualifiers"></code> <code class="arguments">OBJECT</code><code>)</code>  </header> <div class="docstring"><pre>Accessor to the font that this buffer uses to render with.
+
+You can change this at any time to switch what to render with.</pre></div> </article> </li><li> <a name="CL-FOND:HANDLE"> </a> <article> <header class="accessor"> <span class="type">accessor</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND:HANDLE">HANDLE</a></code></h4> <code class="qualifiers"></code> <code class="arguments">OBJECT</code><code>)</code>  </header> <div class="docstring"><pre>Accessor to the pointer to the foreign object.
+
+See <a href="#CL-FOND:C-OBJECT">C-OBJECT</a></pre></div> </article> </li><li> <a name="CL-FOND:MAKE-BUFFER"> </a> <article> <header class="function"> <span class="type">function</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND:MAKE-BUFFER">MAKE-BUFFER</a></code></h4> <code class="qualifiers"></code> <code class="arguments">FONT WIDTH HEIGHT</code><code>)</code>  </header> <div class="docstring"><pre>Create a new buffer instance.
+
+The font is the font instance to render with, and the width
+and height specify the dimensions of the texture that this
+buffer renders to.
+
+See <a href="#CL-FOND-CFFI:BUFFER">BUFFER</a>
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND:MAKE-FONT"> </a> <article> <header class="function"> <span class="type">function</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND:MAKE-FONT">MAKE-FONT</a></code></h4> <code class="qualifiers"></code> <code class="arguments">FILE CHARSET &amp;REST ARGS &amp;KEY INDEX SIZE OVERSAMPLE WIDTH HEIGHT</code><code>)</code>  </header> <div class="docstring"><pre>Create a new font instance for the given TTF file and character set.
+
+The charset should be a string containing all characters that
+the font should be able to draw. The index is the index of the
+font within the file. Some TTF files can contain multiple fonts
+in one. Usually, you won't need to set this parameter. Oversample
+is the oversampling factor that should be used. Using
+oversampling might result in better quality rendering, at the
+cost of massively increasing the necessary size of the atlas.
+The necessary size is multiplied by the oversampling factor in
+both dimensions. The width and height are optional factors that
+when given specify the starting texture atlas size to use to
+attempt to fit the glyphs. If this size is too small, an error
+is signalled.
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND:CHARSET"> </a> <article> <header class="generic"> <span class="type">generic</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND:CHARSET">CHARSET</a></code></h4> <code class="qualifiers"></code> <code class="arguments">FONT</code><code>)</code>  </header> <div class="docstring"><pre>Returns a string containing all the characters this font instance is capable of drawing.
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND:COMPUTE-EXTENT"> </a> <article> <header class="generic"> <span class="type">generic</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND:COMPUTE-EXTENT">COMPUTE-EXTENT</a></code></h4> <code class="qualifiers"></code> <code class="arguments">FONT TEXT</code><code>)</code>  </header> <div class="docstring"><pre>Compute the extent of the given text in pixels.
+
+Returns a property list with the following entries:
+:L    --- The extent to the left from zero.
+:R    --- The extent to the right from zero.
+:T    --- The extent up from the baseline.
+:B    --- The extent down from the baseline.
+:GAP  --- The gap between two lines of text.
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND:COMPUTE-TEXT"> </a> <article> <header class="generic"> <span class="type">generic</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND:COMPUTE-TEXT">COMPUTE-TEXT</a></code></h4> <code class="qualifiers"></code> <code class="arguments">FONT TEXT</code><code>)</code>  </header> <div class="docstring"><pre>Compute the vertex array object to draw the given text.
+
+Returns two values: the OpenGL VAO ID, and the number of
+elements stored in the VAO.
+
+In order to actually use this, you will need to bind the
+font's texture and use a vertex and fragment shader that
+draw the VAO as appropriate. The VAO contains two arrays
+of vec2s for this purpose: the first being the vertex
+coordinates, and the second being the texture coordinates.
+The texture only contains a red component, with the other
+components being set to zero.
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND:FILE"> </a> <article> <header class="generic"> <span class="type">generic</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND:FILE">FILE</a></code></h4> <code class="qualifiers"></code> <code class="arguments">FONT</code><code>)</code>  </header> <div class="docstring"><pre>Returns the pathname for the TTF file this font contains.
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND:FREE"> </a> <article> <header class="generic"> <span class="type">generic</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND:FREE">FREE</a></code></h4> <code class="qualifiers"></code> <code class="arguments">OBJECT</code><code>)</code>  </header> <div class="docstring"><pre>Immediately frees the foreign object associated with the instance.</pre></div> </article> </li><li> <a name="CL-FOND:HEIGHT"> </a> <article> <header class="generic"> <span class="type">generic</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND:HEIGHT">HEIGHT</a></code></h4> <code class="qualifiers"></code> <code class="arguments">FONT</code><code>)</code>  </header> <div class="docstring"><pre>Returns the height of the object's texture.
+
+See <a href="#CL-FOND:TEXTURE">TEXTURE</a>
+See <a href="#CL-FOND-CFFI:FONT">FONT</a>
+See <a href="#CL-FOND-CFFI:BUFFER">BUFFER</a></pre></div> </article> </li><li> <a name="CL-FOND:RENDER"> </a> <article> <header class="generic"> <span class="type">generic</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND:RENDER">RENDER</a></code></h4> <code class="qualifiers"></code> <code class="arguments">BUFFER TEXT &amp;KEY X Y COLOR</code><code>)</code>  </header> <div class="docstring"><pre>Render the given text to the buffer.
+
+The X and Y coordinates are offsets inside the texture,
+counting from the top left, as is usual for graphical
+applications. Thus Y grows downwards, rather than upwards
+like in OpenGL. The color should be a list of floats in
+the range of [0,1] representing RGBA in that order, 
+defaulting to 1 for each component.
+
+Returns the OpenGL texture ID that we rendered to.</pre></div> </article> </li><li> <a name="CL-FOND:SIZE"> </a> <article> <header class="generic"> <span class="type">generic</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND:SIZE">SIZE</a></code></h4> <code class="qualifiers"></code> <code class="arguments">FONT</code><code>)</code>  </header> <div class="docstring"><pre>Returns the font's size in pixels.
+
+See <a href="#CL-FOND-CFFI:FONT">FONT</a></pre></div> </article> </li><li> <a name="CL-FOND:TEXTURE"> </a> <article> <header class="generic"> <span class="type">generic</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND:TEXTURE">TEXTURE</a></code></h4> <code class="qualifiers"></code> <code class="arguments">FONT</code><code>)</code>  </header> <div class="docstring"><pre>Returns the OpenGL texture ID for the texture contained in the object.
+
+See <a href="#CL-FOND:WIDTH">WIDTH</a>
+See <a href="#CL-FOND:HEIGHT">HEIGHT</a>
+See <a href="#CL-FOND-CFFI:FONT">FONT</a>
+See <a href="#CL-FOND-CFFI:BUFFER">BUFFER</a></pre></div> </article> </li><li> <a name="CL-FOND:WIDTH"> </a> <article> <header class="generic"> <span class="type">generic</span>  <code>(</code><h4 class="name"><code><a href="#CL-FOND:WIDTH">WIDTH</a></code></h4> <code class="qualifiers"></code> <code class="arguments">FONT</code><code>)</code>  </header> <div class="docstring"><pre>Returns the width of the object's texture.
+
+See <a href="#CL-FOND:TEXTURE">TEXTURE</a>
+See <a href="#CL-FOND-CFFI:FONT">FONT</a>
+See <a href="#CL-FOND-CFFI:BUFFER">BUFFER</a></pre></div> </article> </li></ul> </li></ul> </article>  </main> </body> </html> 

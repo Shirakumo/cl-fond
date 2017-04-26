@@ -62,6 +62,8 @@
   (:use #:cl #:cffi)
   ;; wrapper.lisp
   (:export
+   #:fond-error
+   #:error-code
    #:c-object
    #:handle
    #:free
@@ -71,14 +73,12 @@
    #:compute-extent
    #:file
    #:size
-   #:atlas-width
-   #:atlas-height
+   #:width
    #:height
-   #:atlas
+   #:text-height
+   #:texture
    #:charset
    #:buffer
+   #:font
    #:make-buffer
-   #:render
-   #:texture
-   #:width
-   #:height))
+   #:render))
