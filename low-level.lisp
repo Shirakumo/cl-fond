@@ -37,7 +37,8 @@
   :not-loaded
   :utf8-conversion-error
   :unloaded-glyph
-  :no-characters-or-codepoints)
+  :no-characters-or-codepoints
+  :unknown)
 
 (defcstruct (font :class font :conc-name font-)
   ;; Font info

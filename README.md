@@ -37,7 +37,7 @@ If you want to manually render the characters instead, you'll want to use `compu
 
 Returned by it will be an OpenGL vertex array to draw with and the number of elements it contains. After binding your shader program and setting things up properly, you can then draw the characters as follows:
 
-    (gl:bind-texture :texture-2d (cl-fond:atlas *font*))
+    (gl:bind-texture :texture-2d (cl-fond:texture *font*))
     (gl:bind-vertex-array vao)
     (%gl:draw-elements :triangles count :unsigned-int 0)
 

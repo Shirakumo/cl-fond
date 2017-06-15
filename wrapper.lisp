@@ -7,13 +7,13 @@
 (in-package #:org.shirakumo.fraf.fond)
 
 (define-condition fond-error (error)
-  ((error-code :initarg :error-code :accessor error-code))
+  ((error-code :initarg :error-code :initform :unknown :accessor error-code))
   (:report (lambda (c s) (write-string (cl-fond-cffi:fond-error-string (error-code c)) s))))
 
 (defun show-error ()
   (let ((code (cl-fond-cffi:fond-error)))
     (unless (eql code :no-error)
-      (error 'fond-error :code code))))
+      (error 'fond-error :error-code code))))
 
 (defun calloc (type)
   (let ((ptr (cffi:foreign-alloc type)))
