@@ -82,6 +82,12 @@
     (values (cffi:mem-ref vao :uint)
             (cffi:mem-ref n 'cl-fond-cffi:size_t))))
 
+(defmethod update-text ((font font) text vbo ebo)
+  (with-foreign-objects ((n 'cl-fond-cffi:size_t))
+    (unless (cl-fond-cffi:update-text (handle font) text n vbo ebo)
+      (show-error))
+    (cffi:mem-ref n 'cl-fond-cffi:size_t)))
+
 (defmethod compute-extent ((font font) text)
   (with-foreign-object (extent '(:struct cl-fond-cffi:extent))
     (unless (cl-fond-cffi:compute-extent (handle font) text extent)

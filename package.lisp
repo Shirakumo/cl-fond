@@ -47,6 +47,8 @@
    #:load-font-fit
    #:compute-text
    #:compute-text-u
+   #:update-text
+   #:update-text-u
    #:compute-extent
    #:compute-extent-u
    #:free-buffer
@@ -70,6 +72,7 @@
    #:font
    #:make-font
    #:compute-text
+   #:update-text
    #:compute-extent
    #:file
    #:size

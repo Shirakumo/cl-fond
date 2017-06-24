@@ -96,6 +96,21 @@
   (n (:pointer size_t))
   (vao (:pointer :uint)))
 
+(defcfun (update-text "fond_update") :boolean
+  (font (:pointer (:struct font)))
+  (text :string)
+  (n (:pointer size_t))
+  (vbo :uint)
+  (ebo :uint))
+
+(defcfun (update-text-u "fond_update_u") :boolean
+  (font (:pointer (:struct font)))
+  (text :pointer)
+  (size size_t)
+  (n (:pointer size_t))
+  (vbo :uint)
+  (ebo :uint))
+
 (defcfun (compute-extent "fond_compute_extent") :boolean
   (font (:pointer (:struct font)))
   (text :string)
