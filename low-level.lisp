@@ -67,11 +67,11 @@
   (framebuffer :uint))
 
 (defcstruct (extent :class extent :conc-name extent-)
-  (l :float)
-  (r :float)
-  (t :float)
-  (b :float)
-  (gap :float))
+  (:l :float)
+  (:r :float)
+  (:t :float)
+  (:b :float)
+  (:gap :float))
 
 (defcfun (free-font "fond_free") :void
   (font (:pointer (:struct font))))
