@@ -77,21 +77,37 @@
 (defmethod compute-text ((font font) text)
   (with-foreign-objects ((n 'cl-fond-cffi:size_t)
                          (vao :uint))
-    (unless (cl-fond-cffi:compute-text (handle font) text n vao)
-      (show-error))
+    (unless (etypecase text
+              #+sb-unicode
+              ((not base-string)
+               (cffi:with-pointer-to-vector-data (pointer text)
+                 (cl-fond-cffi:compute-text-u (handle font) pointer (length text) n vao)))
+              (string
+               (cl-fond-cffi:compute-text (handle font) text n vao))))
     (values (cffi:mem-ref vao :uint)
             (cffi:mem-ref n 'cl-fond-cffi:size_t))))
 
 (defmethod update-text ((font font) text vbo ebo)
   (with-foreign-objects ((n 'cl-fond-cffi:size_t))
-    (unless (cl-fond-cffi:update-text (handle font) text n vbo ebo)
-      (show-error))
+    (unless (etypecase text
+              #+sb-unicode
+              ((not base-string)
+               (cffi:with-pointer-to-vector-data (pointer text)
+                 (cl-fond-cffi:update-text-u (handle font) pointer (length text) n vbo ebo)))
+              (string
+               (cl-fond-cffi:update-text (handle font) text n vbo ebo)))
+            (show-error))
     (cffi:mem-ref n 'cl-fond-cffi:size_t)))
 
 (defmethod compute-extent ((font font) text)
   (with-foreign-object (extent '(:struct cl-fond-cffi:extent))
-    (unless (cl-fond-cffi:compute-extent (handle font) text extent)
-      (show-error))
+    (unless (etypecase text
+              #+sb-unicode
+              ((not base-string)
+               (cffi:with-pointer-to-vector-data (pointer text)
+                 (cl-fond-cffi:compute-extent-u (handle font) pointer (length text) extent)))
+              (string
+               (cl-fond-cffi:compute-extent (handle font) text extent))))
     (cffi:mem-ref extent '(:struct cl-fond-cffi:extent))))
 
 (defmethod file ((font font))
