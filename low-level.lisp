@@ -17,7 +17,7 @@
   (:unix (:or "libfond.so"
               #+X86 "lin32-libfond.so"
               #+X86-64 "lin64-libfond.so"))
-  (:windows (:or "out123.dll"
+  (:windows (:or "fond.dll"
                  #+X86 "win32-libfond.dll"
                  #+X86-64 "win64-libfond.dll"))
   (t (:default "fond")))
