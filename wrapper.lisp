@@ -95,7 +95,8 @@
                (cffi:with-pointer-to-vector-data (pointer text)
                  (cl-fond-cffi:update-text-u (handle font) pointer (length text) n vbo ebo)))
               (string
-               (cl-fond-cffi:update-text (handle font) text n vbo ebo)))
+               (cffi:with-foreign-string (pointer text :encoding :utf-32)
+                 (cl-fond-cffi:update-text-u (handle font) pointer (length text) n vbo ebo))))
             (show-error))
     (cffi:mem-ref n 'cl-fond-cffi:size_t)))
 
@@ -107,7 +108,8 @@
                (cffi:with-pointer-to-vector-data (pointer text)
                  (cl-fond-cffi:compute-extent-u (handle font) pointer (length text) extent)))
               (string
-               (cl-fond-cffi:compute-extent (handle font) text extent))))
+               (cffi:with-foreign-string (pointer text :encoding :utf-32)
+                 (cl-fond-cffi:compute-extent-u (handle font) pointer (length text) extent)))))
     (cffi:mem-ref extent '(:struct cl-fond-cffi:extent))))
 
 (defmethod file ((font font))
