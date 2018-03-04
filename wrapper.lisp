@@ -74,7 +74,7 @@
     (cl-fond-cffi:free-font handle)
     (cffi:foreign-free handle)))
 
-(defmethod compute-text ((font font) text)
+(defun compute-text (font text)
   (with-foreign-objects ((n 'cl-fond-cffi:size_t)
                          (vao :uint))
     (unless (etypecase text
@@ -87,7 +87,7 @@
     (values (cffi:mem-ref vao :uint)
             (cffi:mem-ref n 'cl-fond-cffi:size_t))))
 
-(defmethod update-text ((font font) text vbo ebo)
+(defun update-text (font text vbo ebo)
   (with-foreign-objects ((n 'cl-fond-cffi:size_t))
     (unless (etypecase text
               #+sb-unicode
@@ -100,7 +100,7 @@
             (show-error))
     (cffi:mem-ref n 'cl-fond-cffi:size_t)))
 
-(defmethod compute-extent ((font font) text)
+(defun compute-extent (font text)
   (with-foreign-object (extent '(:struct cl-fond-cffi:extent))
     (unless (etypecase text
               #+sb-unicode
@@ -112,14 +112,14 @@
                  (cl-fond-cffi:compute-extent-u (handle font) pointer (length text) extent)))))
     (cffi:mem-ref extent '(:struct cl-fond-cffi:extent))))
 
-(defmethod file ((font font))
+(defun file (font)
   (uiop:parse-native-namestring
    (cl-fond-cffi:font-file (handle font))))
 
-(defmethod size ((font font))
+(defun size (font)
   (cl-fond-cffi:font-size (handle font)))
 
-(defmethod text-height ((font font))
+(defun text-height (font)
   (with-foreign-object (extent '(:struct cl-fond-cffi:extent))
     (unless (cl-fond-cffi:compute-extent-u (handle font) (cffi:null-pointer) 0 extent)
       (show-error))
@@ -134,7 +134,7 @@
 (defmethod texture ((font font))
   (cl-fond-cffi:font-atlas (handle font)))
 
-(defmethod charset ((font font))
+(defun charset (font)
   (cl-fond-cffi:font-characters (handle font)))
 
 (defclass buffer (c-object)
