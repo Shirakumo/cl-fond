@@ -104,7 +104,7 @@
   (with-foreign-object (extent '(:struct cl-fond-cffi:extent))
     (unless (etypecase text
               #+sb-unicode
-              ((not base-string)
+              ((and (not base-string) sb-kernel:simple-unboxed-array)
                (cffi:with-pointer-to-vector-data (pointer text)
                  (cl-fond-cffi:compute-extent-u (handle font) pointer (length text) extent)))
               (string
