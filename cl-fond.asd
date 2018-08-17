@@ -10,7 +10,9 @@
   :author "Nicolas Hafner <shinmera@tymoon.eu>"
   :maintainer "Nicolas Hafner <shinmera@tymoon.eu>"
   :description "Bindings to libfond, a simple text rendering engine for OpenGL"
-  :homepage "https://github.com/Shirakumo/cl-fond"
+  :homepage "https://Shirakumo.github.io/cl-fond/"
+  :bug-tracker "https://github.com/Shirakumo/cl-fond/issues"
+  :source-control (:git "https://github.com/Shirakumo/cl-fond.git")
   :serial T
   :components ((:file "package")
                (:file "low-level")
