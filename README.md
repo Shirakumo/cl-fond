@@ -44,3 +44,6 @@ Returned by it will be an OpenGL vertex array to draw with and the number of ele
 The VAO contains two `vec2` inputs: the position and the texture coordinate. Note that the position is scaled to pixel size. You will likely want to adapt this in your vertex shader to fit appropriately. In your fragment shader you will only want to read out the `r` component of the texture. Every other component is 0.
 
 See the default [vertex](https://github.com/Shirakumo/libfond/blob/master/src/shader/to_texture.vert) and [fragment](https://github.com/Shirakumo/libfond/blob/master/src/shader/to_texture.frag) shaders used by the buffer for an example.
+
+## Also See
+* [cepl.fond](https://github.com/cbaggers/cepl.fond) for integration into CEPL.
