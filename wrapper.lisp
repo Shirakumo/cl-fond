@@ -91,7 +91,7 @@
   (with-foreign-objects ((n 'cl-fond-cffi:size_t))
     (unless (etypecase text
               #+sb-unicode
-              ((not base-string)
+              ((and (not base-string) sb-kernel:simple-unboxed-array)
                (cffi:with-pointer-to-vector-data (pointer text)
                  (cl-fond-cffi:update-text-u (handle font) pointer (length text) n vbo ebo)))
               (string
