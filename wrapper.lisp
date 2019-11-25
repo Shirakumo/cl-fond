@@ -100,16 +100,16 @@
             (show-error))
     (cffi:mem-ref n 'cl-fond-cffi:size_t)))
 
-(defun compute-extent (font text)
+(defun compute-extent (font text &key (start 0) (end (length text)))
   (with-foreign-object (extent '(:struct cl-fond-cffi:extent))
     (unless (etypecase text
               #+sb-unicode
               ((and (not base-string) sb-kernel:simple-unboxed-array)
                (cffi:with-pointer-to-vector-data (pointer text)
-                 (cl-fond-cffi:compute-extent-u (handle font) pointer (length text) extent)))
+                 (cl-fond-cffi:compute-extent-u (handle font) (cffi:inc-pointer pointer start) (- end start) extent)))
               (string
-               (cffi:with-foreign-string (pointer text :encoding :utf-32)
-                 (cl-fond-cffi:compute-extent-u (handle font) pointer (length text) extent)))))
+               (cffi:with-foreign-string (pointer text :encoding :utf-32 :start start :end end)
+                 (cl-fond-cffi:compute-extent-u (handle font) pointer (- end start) extent)))))
     (cffi:mem-ref extent '(:struct cl-fond-cffi:extent))))
 
 (defun file (font)
